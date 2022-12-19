@@ -11,6 +11,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/of_device.h>
+#include <linux/phy/phy.h>
 #include <linux/platform_device.h>
 #include <linux/usb/role.h>
 #include <linux/usb/usb_phy_generic.h>
@@ -22,6 +23,7 @@ struct jz4740_glue {
 	struct musb		*musb;
 	struct clk		*clk;
 	struct usb_role_switch	*role_sw;
+	enum musb_mode		mode;
 };
 
 static irqreturn_t jz4740_musb_interrupt(int irq, void *__hci)
@@ -29,6 +31,7 @@ static irqreturn_t jz4740_musb_interrupt(int irq, void *__hci)
 	unsigned long	flags;
 	irqreturn_t	retval = IRQ_NONE, retval_dma = IRQ_NONE;
 	struct musb	*musb = __hci;
+	struct jz4740_glue *glue = dev_get_drvdata(musb->controller->parent);
 
 	if (IS_ENABLED(CONFIG_USB_INVENTRA_DMA) && musb->dma_controller)
 		retval_dma = dma_controller_irq(irq, musb->dma_controller);
@@ -40,12 +43,13 @@ static irqreturn_t jz4740_musb_interrupt(int irq, void *__hci)
 	musb->int_rx = musb_readw(musb->mregs, MUSB_INTRRX);
 
 	/*
-	 * The controller is gadget only, the state of the host mode IRQ bits is
-	 * undefined. Mask them to make sure that the musb driver core will
-	 * never see them set
+	 * When in gadget mode, mask the host mode IRQ bits to make sure
+	 * that the musb driver core will never see them set.
 	 */
-	musb->int_usb &= MUSB_INTR_SUSPEND | MUSB_INTR_RESUME |
-			 MUSB_INTR_RESET | MUSB_INTR_SOF;
+	if (glue->mode == MUSB_PERIPHERAL) {
+		musb->int_usb &= MUSB_INTR_SUSPEND | MUSB_INTR_RESUME |
+				 MUSB_INTR_RESET | MUSB_INTR_SOF;
+	}
 
 	if (musb->int_usb || musb->int_tx || musb->int_rx)
 		retval = musb_interrupt(musb);
@@ -81,6 +85,9 @@ static int jz4740_musb_role_switch_set(struct usb_role_switch *sw,
 	struct jz4740_glue *glue = usb_role_switch_get_drvdata(sw);
 	struct usb_phy *phy = glue->musb->xceiv;
 
+	if (!phy)
+		return 0;
+
 	switch (role) {
 	case USB_ROLE_NONE:
 		atomic_notifier_call_chain(&phy->notifier, USB_EVENT_NONE, phy);
@@ -105,21 +112,51 @@ static int jz4740_musb_init(struct musb *musb)
 		.driver_data = glue,
 		.fwnode = dev_fwnode(dev),
 	};
+	int err;
 
 	glue->musb = musb;
 
-	if (dev->of_node)
-		musb->xceiv = devm_usb_get_phy_by_phandle(dev, "phys", 0);
-	else
-		musb->xceiv = devm_usb_get_phy(dev, USB_PHY_TYPE_USB2);
-	if (IS_ERR(musb->xceiv))
-		return dev_err_probe(dev, PTR_ERR(musb->xceiv),
-				     "No transceiver configured\n");
+	if (IS_ENABLED(CONFIG_GENERIC_PHY)) {
+		musb->phy = devm_of_phy_get_by_index(dev, dev->of_node, 0);
+		if (IS_ERR(musb->phy)) {
+			err = PTR_ERR(musb->phy);
+			if (err != -ENODEV) {
+				dev_err(dev, "Unable to get PHY\n");
+				return err;
+			}
+
+			musb->phy = NULL;
+		}
+	}
+
+	if (musb->phy) {
+		err = phy_init(musb->phy);
+		if (err) {
+			dev_err(dev, "Failed to init PHY\n");
+			return err;
+		}
+
+		err = phy_power_on(musb->phy);
+		if (err) {
+			dev_err(dev, "Unable to power on PHY\n");
+			goto err_phy_shutdown;
+		}
+	} else {
+		if (dev->of_node)
+			musb->xceiv = devm_usb_get_phy_by_phandle(dev, "phys", 0);
+		else
+			musb->xceiv = devm_usb_get_phy(dev, USB_PHY_TYPE_USB2);
+		if (IS_ERR(musb->xceiv)) {
+			dev_err(dev, "No transceiver configured\n");
+			return PTR_ERR(musb->xceiv);
+		}
+	}
 
 	glue->role_sw = usb_role_switch_register(dev, &role_sw_desc);
 	if (IS_ERR(glue->role_sw)) {
 		dev_err(dev, "Failed to register USB role switch\n");
-		return PTR_ERR(glue->role_sw);
+		err = PTR_ERR(glue->role_sw);
+		goto err_phy_power_down;
 	}
 
 	/*
@@ -131,6 +168,14 @@ static int jz4740_musb_init(struct musb *musb)
 	musb->isr = jz4740_musb_interrupt;
 
 	return 0;
+
+err_phy_power_down:
+	if (musb->phy)
+		phy_power_off(musb->phy);
+err_phy_shutdown:
+	if (musb->phy)
+		phy_exit(musb->phy);
+	return err;
 }
 
 static int jz4740_musb_exit(struct musb *musb)
@@ -138,6 +183,10 @@ static int jz4740_musb_exit(struct musb *musb)
 	struct jz4740_glue *glue = dev_get_drvdata(musb->controller->parent);
 
 	usb_role_switch_unregister(glue->role_sw);
+	if (musb->phy) {
+		phy_power_off(musb->phy);
+		phy_exit(musb->phy);
+	}
 
 	return 0;
 }
@@ -151,12 +200,6 @@ static const struct musb_platform_ops jz4740_musb_ops = {
 	.dma_init	= musbhs_dma_controller_create_noirq,
 	.dma_exit	= musbhs_dma_controller_destroy,
 #endif
-};
-
-static const struct musb_hdrc_platform_data jz4740_musb_pdata = {
-	.mode		= MUSB_PERIPHERAL,
-	.config		= &jz4740_musb_config,
-	.platform_ops	= &jz4740_musb_ops,
 };
 
 static struct musb_fifo_cfg jz4770_musb_fifo_cfg[] = {
@@ -180,30 +223,28 @@ static struct musb_hdrc_config jz4770_musb_config = {
 	.fifo_cfg_size	= ARRAY_SIZE(jz4770_musb_fifo_cfg),
 };
 
-static const struct musb_hdrc_platform_data jz4770_musb_pdata = {
-	.mode		= MUSB_PERIPHERAL, /* TODO: support OTG */
-	.config		= &jz4770_musb_config,
-	.platform_ops	= &jz4740_musb_ops,
-};
-
 static int jz4740_probe(struct platform_device *pdev)
 {
 	struct device			*dev = &pdev->dev;
-	const struct musb_hdrc_platform_data *pdata;
 	struct platform_device		*musb;
 	struct jz4740_glue		*glue;
 	struct clk			*clk;
 	int				ret;
+	struct musb_hdrc_platform_data	pdata = {
+		.platform_ops = &jz4740_musb_ops,
+		.config = device_get_match_data(dev),
+	};
 
 	glue = devm_kzalloc(dev, sizeof(*glue), GFP_KERNEL);
 	if (!glue)
 		return -ENOMEM;
 
-	pdata = of_device_get_match_data(dev);
-	if (!pdata) {
-		dev_err(dev, "missing platform data\n");
-		return -EINVAL;
-	}
+	if (device_property_present(dev, "dr_mode"))
+		pdata.mode = musb_get_mode(dev);
+	else
+		pdata.mode = MUSB_PERIPHERAL;
+
+	glue->mode = pdata.mode;
 
 	musb = platform_device_alloc("musb-hdrc", PLATFORM_DEVID_AUTO);
 	if (!musb) {
@@ -241,7 +282,7 @@ static int jz4740_probe(struct platform_device *pdev)
 		goto err_clk_disable;
 	}
 
-	ret = platform_device_add_data(musb, pdata, sizeof(*pdata));
+	ret = platform_device_add_data(musb, &pdata, sizeof(pdata));
 	if (ret) {
 		dev_err(dev, "failed to add platform_data\n");
 		goto err_clk_disable;
@@ -272,9 +313,9 @@ static int jz4740_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static const struct of_device_id jz4740_musb_of_match[] = {
-	{ .compatible = "ingenic,jz4740-musb", .data = &jz4740_musb_pdata },
-	{ .compatible = "ingenic,jz4770-musb", .data = &jz4770_musb_pdata },
+static struct of_device_id jz4740_musb_of_match[] = {
+	{ .compatible = "ingenic,jz4740-musb", .data = &jz4740_musb_config },
+	{ .compatible = "ingenic,jz4770-musb", .data = &jz4770_musb_config },
 	{ /* sentinel */ },
 };
 MODULE_DEVICE_TABLE(of, jz4740_musb_of_match);
