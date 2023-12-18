@@ -491,7 +491,7 @@ static const struct drm_display_mode nv3051d_rk2023_modes[] = {
 		.flags          = DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_NVSYNC,
 	},
     /* 50Hz */
-    {
+/*    {
 		.hdisplay       = 640,
 		.hsync_start    = 640 + 40,
 		.hsync_end      = 640 + 40 + 2,
@@ -502,9 +502,9 @@ static const struct drm_display_mode nv3051d_rk2023_modes[] = {
 		.vtotal         = 480 + 18 + 2 + 4,
 		.clock          = 19210,
 		.flags          = DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_NVSYNC,
-	},
+	},*/
     /* 75Hz */
-    {
+/*    {
 		.hdisplay       = 640,
 		.hsync_start    = 640 + 40,
 		.hsync_end      = 640 + 40 + 2,
@@ -515,7 +515,7 @@ static const struct drm_display_mode nv3051d_rk2023_modes[] = {
 		.vtotal         = 480 + 18 + 2 + 4,
 		.clock          = 28810,
 		.flags          = DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_NVSYNC,
-	},
+	}, */
 
 };
 
