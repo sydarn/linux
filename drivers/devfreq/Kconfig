@@ -142,6 +142,12 @@ config ARM_RK3399_DMC_DEVFREQ
 	  It sets the frequency for the memory controller and reads the usage counts
 	  from hardware.
 
+config ARM_ROCKCHIP_BUS_DEVFREQ
+	tristate "rockchip bus"
+	depends on ARCH_ROCKCHIP
+	help
+	  rk bus driver
+
 config ARM_SUN8I_A33_MBUS_DEVFREQ
 	tristate "sun8i/sun50i MBUS DEVFREQ Driver"
 	depends on ARCH_SUNXI || COMPILE_TEST

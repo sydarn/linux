@@ -114,25 +114,9 @@
 		compatible = "operating-points-v2";
 		opp-shared;
 
-		opp-600000000 {
-			opp-hz = /bits/ 64 <600000000>;
-			opp-microvolt = <950000 950000 1350000>;
-			clock-latency-ns = <40000>;
-			opp-suspend;
-		};
-		opp-816000000 {
-			opp-hz = /bits/ 64 <816000000>;
-			opp-microvolt = <1050000 1050000 1350000>;
-			clock-latency-ns = <40000>;
-		};
 		opp-1008000000 {
 			opp-hz = /bits/ 64 <1008000000>;
 			opp-microvolt = <1175000 1175000 1350000>;
-			clock-latency-ns = <40000>;
-		};
-		opp-1200000000 {
-			opp-hz = /bits/ 64 <1200000000>;
-			opp-microvolt = <1300000 1300000 1350000>;
 			clock-latency-ns = <40000>;
 		};
 		opp-1296000000 {
@@ -210,12 +194,6 @@
 					cooling-device = <&cpu0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
 					contribution = <4096>;
 				};
-
-				map1 {
-					trip = <&target>;
-					cooling-device = <&gpu THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
-					contribution = <4096>;
-				};
 			};
 		};
 
@@ -223,6 +201,33 @@
 			polling-delay-passive = <100>; /* milliseconds */
 			polling-delay = <1000>; /* milliseconds */
 			thermal-sensors = <&tsadc 1>;
+
+			trips {
+				gpu_threshold: gpu-threshold {
+					temperature = <70000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+
+				gpu_target: gpu-target {
+					temperature = <85000>;
+					hysteresis = <2000>;
+					type = "passive";
+				};
+
+				gpu_crit: gpu-crit {
+					temperature = <115000>;
+					hysteresis = <2000>;
+					type = "critical";
+				};
+			};
+
+			cooling-maps {
+				map0 {
+					trip = <&gpu_target>;
+					cooling-device = <&gpu THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+			};
 		};
 	};
 
@@ -325,6 +330,32 @@
 				pm_qos = <&qos_gpu>;
 				#power-domain-cells = <0>;
 			};
+		};
+	};
+
+	dfi: dfi@ff610000 {
+		reg = <0x00 0xff610000 0x00 0x400>;
+		compatible = "rockchip,px30-dfi";
+		rockchip,pmu = <&pmugrf>;
+		status = "okay";
+	};
+
+	dmc: dmc {
+		compatible = "rockchip,px30-dmc";
+		devfreq-events = <&dfi>;
+		clocks = <&cru SCLK_DDRCLK>;
+		clock-names = "dmc_clk";
+		operating-points-v2 = <&dmc_opp_table>;
+		uptreshold = <40>;
+		downdifferential = <20>;
+		status = "okay";
+	};
+
+	dmc_opp_table: dmc_opp_table {
+		compatible = "operating-points-v2";
+		opp-924000000 {
+			opp-hz = /bits/ 64 <924000000>;
+			opp-microvolt = <1125000>;
 		};
 	};
 
@@ -453,7 +484,7 @@
 				#address-cells = <1>;
 				#size-cells = <0>;
 
-				port@0 {
+				lvds_in: port@0 {
 					reg = <0>;
 					#address-cells = <1>;
 					#size-cells = <0>;
@@ -467,6 +498,10 @@
 						reg = <1>;
 						remote-endpoint = <&vopl_out_lvds>;
 					};
+				};
+
+				lvds_out: port@1 {
+					reg = <1>;
 				};
 			};
 		};
@@ -1039,20 +1074,12 @@
 	gpu_opp_table: opp-table-1 {
 		compatible = "operating-points-v2";
 
-		opp-200000000 {
-			opp-hz = /bits/ 64 <200000000>;
-			opp-microvolt = <950000>;
-		};
-		opp-300000000 {
-			opp-hz = /bits/ 64 <300000000>;
-			opp-microvolt = <975000>;
-		};
 		opp-400000000 {
 			opp-hz = /bits/ 64 <400000000>;
 			opp-microvolt = <1050000>;
 		};
-		opp-480000000 {
-			opp-hz = /bits/ 64 <480000000>;
+		opp-440000000 {
+			opp-hz = /bits/ 64 <440000000>;
 			opp-microvolt = <1125000>;
 		};
 	};
@@ -1113,7 +1140,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 
-			port@0 {
+			dsi_in: port@0 {
 				reg = <0>;
 				#address-cells = <1>;
 				#size-cells = <0>;
@@ -1127,6 +1154,10 @@
 					reg = <1>;
 					remote-endpoint = <&vopl_out_dsi>;
 				};
+			};
+
+			dsi_out: port@1 {
+				reg = <1>;
 			};
 		};
 	};
