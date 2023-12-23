@@ -192,10 +192,13 @@ static const struct drm_display_mode mode_template = {
 };
 
 static const int pixel_clocks[] = {
-	14118, /* Should yield 14117647 Hz pixel clock aka 49.84 Hz PAL everything */
-	16976, /* Should yield 16975609 Hz pixel clock aka 59.93 Hz NTSC MS/MD/GG/PS */
-	17023, /* Should yield 17023255 Hz pixel clock aka 60.01 Hz NTSC NES/SNES */
-	21375, /* Should yield 21375000 Hz pixel clock aka 75.47 Hz Wonderswan(Color) */
+	14118, /* 49.84 Hz PAL everything */
+	15545, /* 54.88 Hz Arcade: Midway, Toaplan, R-Type */
+	16286, /* 57.50 Hz Arcade: Toaplan, more? */
+	16917, /* 59.73 Hz GB/GBC/GBA */
+	16976, /* 59.935 Hz NTSC MS/MD/GG/PS */
+	17022, /* 60.01 Hz NTSC NES/SNES */
+	21375, /* 75.47 Hz Wonderswan(Color) */
 };
 
 static int kd35t133_get_modes(struct drm_panel *panel,
@@ -218,7 +221,7 @@ static int kd35t133_get_modes(struct drm_panel *panel,
 		drm_mode_set_name(mode);
 
 		mode->type = DRM_MODE_TYPE_DRIVER;
-		if (pixel_clocks[i] == pixel_clocks[2])
+		if (pixel_clocks[i] == pixel_clocks[4])
 			mode->type |= DRM_MODE_TYPE_PREFERRED;
 
 		drm_mode_probed_add(connector, mode);
