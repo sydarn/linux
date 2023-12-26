@@ -162,22 +162,22 @@ static int panel_nv3051d_init_sequence(struct panel_nv3051d *ctx)
 	mipi_dsi_dcs_write_seq(dsi, 0x42, 0x80);
 	mipi_dsi_dcs_write_seq(dsi, 0x43, 0x81);
 	mipi_dsi_dcs_write_seq(dsi, 0x44, 0x11);
-	mipi_dsi_dcs_write_seq(dsi, 0x45, 0xF2);
-	mipi_dsi_dcs_write_seq(dsi, 0x46, 0xF1);
-	mipi_dsi_dcs_write_seq(dsi, 0x47, 0x11);
-	mipi_dsi_dcs_write_seq(dsi, 0x48, 0xF4);
-	mipi_dsi_dcs_write_seq(dsi, 0x49, 0xF3);
+	mipi_dsi_dcs_write_seq(dsi, 0x45, 0xF2); /* F2 original, E6 in pk dtsi*/
+	mipi_dsi_dcs_write_seq(dsi, 0x46, 0xF1); /* F1 original, E5 in pk dtsi*/
+	mipi_dsi_dcs_write_seq(dsi, 0x47, 0x11); 
+	mipi_dsi_dcs_write_seq(dsi, 0x48, 0xF4); /* F4 original, E8 in ok dtsi */
+	mipi_dsi_dcs_write_seq(dsi, 0x49, 0xF3); /* F3 original, E7 in pk dtsi */
 	mipi_dsi_dcs_write_seq(dsi, 0x50, 0x02);
 	mipi_dsi_dcs_write_seq(dsi, 0x51, 0x01);
 	mipi_dsi_dcs_write_seq(dsi, 0x52, 0x04);
 	mipi_dsi_dcs_write_seq(dsi, 0x53, 0x03);
 	mipi_dsi_dcs_write_seq(dsi, 0x54, 0x11);
-	mipi_dsi_dcs_write_seq(dsi, 0x55, 0xF6);
-	mipi_dsi_dcs_write_seq(dsi, 0x56, 0xF5);
-	mipi_dsi_dcs_write_seq(dsi, 0x57, 0x11);
-	mipi_dsi_dcs_write_seq(dsi, 0x58, 0xF8);
-	mipi_dsi_dcs_write_seq(dsi, 0x59, 0xF7);
-	mipi_dsi_dcs_write_seq(dsi, 0x7E, 0x02);
+	mipi_dsi_dcs_write_seq(dsi, 0x55, 0xF6); /* F6 original, EA in pk dtsi*/
+	mipi_dsi_dcs_write_seq(dsi, 0x56, 0xF5); /* F5 original, E9 in pk dtsi */
+	mipi_dsi_dcs_write_seq(dsi, 0x57, 0x11); 
+	mipi_dsi_dcs_write_seq(dsi, 0x58, 0xF8); /* F8 original, EC in pk dtsi */
+	mipi_dsi_dcs_write_seq(dsi, 0x59, 0xF7); /* F7 original, EB in pk DTSI */
+	mipi_dsi_dcs_write_seq(dsi, 0x7E, 0x02); 
 	mipi_dsi_dcs_write_seq(dsi, 0x7F, 0x80);
 	mipi_dsi_dcs_write_seq(dsi, 0xE0, 0x5A);
 	mipi_dsi_dcs_write_seq(dsi, 0xB1, 0x00);
@@ -484,14 +484,14 @@ static const struct drm_display_mode nv3051d_rk2023_modes[] = {
 		.hsync_end      = 640 + 40 + 2,
 		.htotal         = 640 + 40 + 2 + 80,
 		.vdisplay       = 480,
-		.vsync_start    = 480 + 18 + 2,
-		.vsync_end      = 480 + 18 + 2,
-		.vtotal         = 480 + 18 + 2,
+		.vsync_start    = 480 + 4,
+		.vsync_end      = 480 + 4 + 2,
+		.vtotal         = 480 + 4 + 2 + 4,
 		.clock          = 23040,
 		.flags          = DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_NVSYNC,
 	},
     /* 50Hz */
-/*    {
+    {
 		.hdisplay       = 640,
 		.hsync_start    = 640 + 40,
 		.hsync_end      = 640 + 40 + 2,
@@ -502,9 +502,9 @@ static const struct drm_display_mode nv3051d_rk2023_modes[] = {
 		.vtotal         = 480 + 18 + 2 + 4,
 		.clock          = 19210,
 		.flags          = DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_NVSYNC,
-	},*/
+	},
     /* 75Hz */
-/*    {
+    {
 		.hdisplay       = 640,
 		.hsync_start    = 640 + 40,
 		.hsync_end      = 640 + 40 + 2,
@@ -515,8 +515,7 @@ static const struct drm_display_mode nv3051d_rk2023_modes[] = {
 		.vtotal         = 480 + 18 + 2 + 4,
 		.clock          = 28810,
 		.flags          = DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_NVSYNC,
-	}, */
-
+	},
 };
 
 static const struct nv3051d_panel_info nv3051d_rg351v_info = {
