@@ -480,14 +480,14 @@ static const struct drm_display_mode nv3051d_rk2023_modes[] = {
     /* 60Hz */
     {
 		.hdisplay       = 640,
-		.hsync_start    = 640 + 40,
-		.hsync_end      = 640 + 40 + 2,
-		.htotal         = 640 + 40 + 2 + 80,
+		.hsync_start    = 640 + 44,
+		.hsync_end      = 640 + 44 + 2,
+		.htotal         = 640 + 44 + 2 + 42,
 		.vdisplay       = 480,
 		.vsync_start    = 480 + 2,
-		.vsync_end      = 480 + 2 + 2,
-		.vtotal         = 480 + 2 + 2 + 4,
-		.clock          = 23040,
+		.vsync_end      = 480 + 2 + 4,
+		.vtotal         = 480 + 2 + 4 + 3,
+		.clock          = 22000,
 		.flags          = DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_NVSYNC,
 	},
     /* 50Hz */
