@@ -486,7 +486,7 @@ static const struct drm_display_mode nv3051d_rk2023_modes[] = {
 		.vdisplay       = 480,
 		.vsync_start    = 480 + 0,
 		.vsync_end      = 480 + 0 + 6,
-		.vtotal         = 480 + 0 + 6 + 1,
+		.vtotal         = 480 + 0 + 6 + 2,
 		.clock          = 22000,
 		.flags          = DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_NVSYNC,
 	},
