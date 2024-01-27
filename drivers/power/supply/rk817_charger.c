@@ -679,7 +679,7 @@ static enum power_supply_usb_type rk817_usb_type[] = {
 };
 
 static const struct power_supply_desc rk817_bat_desc = {
-	.name = "rk817-battery",
+	.name = "battery",
 	.type = POWER_SUPPLY_TYPE_BATTERY,
 	.properties = rk817_bat_props,
 	.num_properties = ARRAY_SIZE(rk817_bat_props),
@@ -687,7 +687,7 @@ static const struct power_supply_desc rk817_bat_desc = {
 };
 
 static const struct power_supply_desc rk817_chg_desc = {
-	.name = "rk817-charger",
+	.name = "charger",
 	.type = POWER_SUPPLY_TYPE_USB,
 	.usb_types = rk817_usb_type,
 	.num_usb_types = ARRAY_SIZE(rk817_usb_type),

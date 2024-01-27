@@ -553,6 +553,25 @@ void input_copy_abs(struct input_dev *dst, unsigned int dst_axis,
 EXPORT_SYMBOL(input_copy_abs);
 
 /**
+ * input_invert_abs - Invert the abs value for an inverted axis.
+ * @dev: Input device with absolute events
+ * @axis: ABS_* value selecting the destination axis for the event to
+ *	  invert.
+ * @val: Value to be inverted based on min and max values of the axis.
+ *
+ * Return an inverted value for a given ABS axis based on its min and
+ * max values.
+ */
+int input_invert_abs(struct input_dev *dev, unsigned int axis, int val)
+{
+	int min = dev->absinfo[axis].minimum;
+	int max = dev->absinfo[axis].maximum;
+
+	return (max + min) - val;
+}
+EXPORT_SYMBOL(input_invert_abs);
+
+/**
  * input_grab_device - grabs device for exclusive use
  * @handle: input handle that wants to own the device
  *
