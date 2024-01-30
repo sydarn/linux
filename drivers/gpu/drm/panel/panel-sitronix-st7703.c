@@ -58,7 +58,6 @@ struct st7703 {
 	struct gpio_desc *reset_gpio;
 	struct regulator *vcc;
 	struct regulator *iovcc;
-	bool prepared;
 	enum drm_panel_orientation orientation;
 
 	struct dentry *debugfs;
@@ -670,13 +669,9 @@ static int st7703_unprepare(struct drm_panel *panel)
 {
 	struct st7703 *ctx = panel_to_st7703(panel);
 
-	if (!ctx->prepared)
-		return 0;
-
 	gpiod_set_value_cansleep(ctx->reset_gpio, 1);
 	regulator_disable(ctx->iovcc);
 	regulator_disable(ctx->vcc);
-	ctx->prepared = false;
 
 	return 0;
 }
@@ -685,9 +680,6 @@ static int st7703_prepare(struct drm_panel *panel)
 {
 	struct st7703 *ctx = panel_to_st7703(panel);
 	int ret;
-
-	if (ctx->prepared)
-		return 0;
 
 	dev_dbg(ctx->dev, "Resetting the panel\n");
 	gpiod_set_value_cansleep(ctx->reset_gpio, 1);
@@ -710,8 +702,6 @@ static int st7703_prepare(struct drm_panel *panel)
 
 	gpiod_set_value_cansleep(ctx->reset_gpio, 0);
 	usleep_range(15000, 20000);
-
-	ctx->prepared = true;
 
 	return 0;
 }
@@ -744,7 +734,6 @@ static int st7703_get_modes(struct drm_panel *panel,
 	drm_display_info_set_bus_formats(&connector->display_info,
 					 mantix_bus_formats,
 					 ARRAY_SIZE(mantix_bus_formats));
-	drm_connector_set_panel_orientation(connector, ctx->orientation);
 
 	return 1;
 }
@@ -813,6 +802,12 @@ static int st7703_probe(struct mipi_dsi_device *dsi)
 	if (IS_ERR(ctx->reset_gpio))
 		return dev_err_probe(dev, PTR_ERR(ctx->reset_gpio), "Failed to get reset gpio\n");
 
+	ret = of_drm_get_panel_orientation(dev->of_node, &ctx->orientation);
+	if (ret < 0) {
+		dev_err(dev, "%pOF: failed to get orientation %d\n", dev->of_node, ret);
+		return ret;
+	}
+
 	mipi_dsi_set_drvdata(dsi, ctx);
 
 	ctx->dev = dev;
@@ -830,12 +825,6 @@ static int st7703_probe(struct mipi_dsi_device *dsi)
 	if (IS_ERR(ctx->iovcc))
 		return dev_err_probe(dev, PTR_ERR(ctx->iovcc),
 				     "Failed to request iovcc regulator\n");
-
-	ret = of_drm_get_panel_orientation(dev->of_node, &ctx->orientation);
-	if (ret < 0) {
-		dev_err(dev, "%pOF: failed to get orientation %d\n", dev->of_node, ret);
-		return ret;
-	}
 
 	drm_panel_init(&ctx->panel, dev, &st7703_drm_funcs,
 		       DRM_MODE_CONNECTOR_DSI);
